@@ -144,26 +144,22 @@ def extract_new_features(ti):
 @task
 def save_to_parquet(path, filename, task_id, key, ti):
     """
-    MUST COMPLETE THIS SECTION AND KEPP WORKING DOWN
-    --------------------------------------------------------------------------------------------------------------------
-
-    Saves dataframe to parquet
+    Saves dataframe to parquet format and saves as compressed 'gzip' file.
 
     Parameters
     ----------
     path : string
-        path
+        Path to save.
 
     filename : string
+        Name of file.
 
     task_id : string
+        Task id which to retrieve data from.
 
     key : string
+        Specified key from the task_id.
 
-    Returns
-    -------
-    ti : Task Instance.
-        Json serialized pandas dataframe for new feature dataset. 
     """
     df = pd.read_json(ti.xcom_pull(task_ids=task_id, key=key))
     if not os.path.exists(path):
