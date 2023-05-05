@@ -26,8 +26,8 @@ class RandomForrestReg():
         self.s3 = boto3.resource(
             service_name='s3',
             region_name='us-east-2',
-            aws_access_key_id='AKIAU7KSDAMUYMCHZNJ7',
-            aws_secret_access_key='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'
+            aws_access_key_id='AWS_ACCESS_KEY_ID',
+            aws_secret_access_key='AWS_SECRET_ACCESS_KEY'
         )
         self.model_filename = 'volume_rf_reg.pkl'
         self.scaler_filename = 'scaler_model.bin'
