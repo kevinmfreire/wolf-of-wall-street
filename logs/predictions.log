@@ -1,0 +1,6 @@
+INFO:root:Model Performance Metrics: Training Accuracy: 0.9267340817844237, Test Accuracy: 0.7264834100557607
+INFO:root:Model Prediction Metrics: Mean Absolute Error: 907085.1651177678, Mean Squared Error: 38549528970797.69
+INFO:root:Model trained in 9.203139440218608 minutes
+INFO:root:Saving models to /opt/airflow/models.
+INFO:root:RandomForrestRegressor Model saved to /opt/airflow/models/volume_rf_reg.pkl
+INFO:root:MinMaxScaler Model saved to /opt/airflow/models/scaler_model.bin

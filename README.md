@@ -4,14 +4,15 @@
 
 * Install docker engine through the officical [documentation](https://docs.docker.com/engine/install/ubuntu/).
 * Linux OS
+* Minimum 32GB RAM
 
 ## Table of Content
-1. [Overview]()
-2. [Goal]()
-3. [Methodology]()
-4. [Practical Applications]()
-5. [Usage]()
-6. [Conclusion]()
+1. [Overview](https://github.com/kevinmfreire/wolf-of-wall-street#overview)
+2. [Goal](https://github.com/kevinmfreire/wolf-of-wall-street#goals)
+3. [Methodology](https://github.com/kevinmfreire/wolf-of-wall-street#methodology)
+4. [Practical Applications](https://github.com/kevinmfreire/wolf-of-wall-street#practical-applications)
+5. [Usage](https://github.com/kevinmfreire/wolf-of-wall-street#usage)
+6. [Conclusion](https://github.com/kevinmfreire/wolf-of-wall-street#conclusion)
 
 ## Overview
 
@@ -57,10 +58,12 @@ In order to use the features I first normalized the data to improve model perfor
 I used `scikit-learn RandomForrestRegressor` to train using the features from the [Feature Engineering]() section. I used the model because it is well suited for modelling non-linear data because it is able to capture complex relationships between features and target values (ie. stock prices, trading values, etc.).
 
 ### Data Pipeline
-Leveraged Docker and Apache Ariflow to automate the entire process.
+Leveraged Docker and Apache Ariflow to automate the entire process.  Below is the pipeline using apache airflow.
+
+![pipeline](./images/pipeline.png)
 
 ### Model Serving
-Saving both the `MinMaxScaler` model and the `RandomForrestRegressor` model, I built a class that caa be called via an `/predict` API to performTrading Volume predicitons based on the `vol_moving_avg`, and `adj_close_rolling_med` inputs.
+Saving both the `MinMaxScaler` model and the `RandomForrestRegressor` model, I built a class that caa be called via an `/predict` API to performTrading Volume predicitons based on the `vol_moving_avg`, and `adj_close_rolling_med` inputs. I used streamlit to host my application and can be accessed with the following [link](https://kevinmfreire-wolf-of-wall-street-private-app-cs1376.streamlit.app/).  The model is served through the `app.py` script, in the root directory. 
 
 ## Practical Applications
 There are several use cases for training a machine learning model to predict the stock market trading value:

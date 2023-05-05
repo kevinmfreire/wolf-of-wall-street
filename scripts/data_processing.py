@@ -30,138 +30,54 @@ in incomplete or inaccurate results.
 """
 import os
 import pandas as pd
-from airflow.decorators import task
+import logging
+import time
 
-@task
-def process_symbols_data(ti):
+from utils import save_to_parquet
+
+def process_data(raw_data_path):
     """
-    Processes the symbols metadata.
+    Processes the raw data.
 
     Parameters
     ----------
-    ti : Task instance
-        Path to raw data extracted from ingest task.
+    raw_data_path : Path to raw data.
 
     Returns
     -------
-    ti : Task Instance.
-        Json serialized pandas dataframe. 
+    df_merged : A merged dataframe from different datasources. 
     """
-    symbols_meta = ti.xcom_pull(task_ids='ingest_data', key='symbols_data')
-    df_symbols = pd.read_csv(symbols_meta)[['Symbol', 'Security Name']]
-    ti.xcom_push(key='symbols_df', value=df_symbols.to_json())
-
-@task
-def process_etfs_data(ti):
-    """
-    Processes the etfs data.
-
-    Parameters
-    ----------
-    ti : Task instance
-        Path to raw data extracted from ingest task.
-
-    Returns
-    -------
-    ti : Task Instance.
-        Json serialized pandas dataframe. 
-    """
-    etfs_dir = ti.xcom_pull(task_ids='ingest_data', key='etfs_data')
-    df_market = pd.read_json(ti.xcom_pull(task_ids='process_stocks', key='market_df'))
-    for csv_file in os.listdir(etfs_dir):
-        if csv_file.endswith('.csv'):
-            symbol = csv_file.strip('.csv')
-            df_temp = pd.read_csv(os.path.join(etfs_dir,csv_file))
-            df_temp['Symbol'] = symbol
-            df_market = pd.concat([df_market, df_temp], axis=0, ignore_index=True)
-    ti.xcom_push(key='market_df', value=df_market.to_json())
-
-@task
-def process_stocks_data(ti):
-    """
-    Processes the stocks data.
-
-    Parameters
-    ----------
-    ti : Task instance
-        Path to raw data extracted from ingest task.
-
-    Returns
-    -------
-    ti : Task Instance.
-        Json serialized pandas dataframe. 
-    """
-    stocks_dir = ti.xcom_pull(task_ids='ingest_data', key='stocks_data')
+    files = os.listdir(raw_data_path)
     df_market = pd.DataFrame(columns = ['Date', 'Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume', 'Symbol'])
-    for csv_file in os.listdir(stocks_dir):
-        if csv_file.endswith('.csv'):
-            symbol = csv_file.strip('.csv')
-            df_temp = pd.read_csv(os.path.join(stocks_dir,csv_file))
-            df_temp['Symbol'] = symbol
-            df_market = pd.concat([df_market, df_temp], axis=0, ignore_index=True)
-    ti.xcom_push(key='market_df', value=df_market.to_json())
+    for file in files:
+        if file.endswith('.csv'):
+            df_symbols = pd.read_csv(os.path.join(raw_data_path, file))[['Symbol', 'Security Name']]
+        else:
+            subdir = os.path.join(raw_data_path, file)
+            for csv_file in os.listdir(subdir):
+                if csv_file.endswith('.csv'):
+                    symbol = csv_file.strip('.csv')
+                    df_temp = pd.read_csv(os.path.join(subdir,csv_file))
+                    df_temp['Symbol'] = symbol
+                    df_market = pd.concat([df_market, df_temp], axis=0, ignore_index=True)
+    df_merged = pd.merge(df_symbols, df_market)
+    return df_merged
+if __name__ == '__main__':
+    
+    log_filename = '/opt/airflow/logs/pipeline_execution.log'
+    raw_path = '/opt/airflow/data/raw/'
+    processed_data_path = '/opt/airflow/data/processed/'
+    filename = 'stock-market-prices.parquet.gzip'
 
-@task
-def merge_data(ti):
-    """
-    Merge data.
-
-    Parameters
-    ----------
-    ti : Task instance(s)
-        A json serialized dataframe for etfs plus stocks dataframe, and the symbols dataframe.
-
-    Returns
-    -------
-    ti : Task Instance.
-        Json serialized pandas dataframe for merged data. 
-    """
-    df_market = pd.read_json(ti.xcom_pull(task_ids='process_etfs', key='market_df'))
-    symbols = pd.read_json(ti.xcom_pull(task_ids='process_symbols', key='symbols_df'))
-    df_merged = pd.merge(symbols, df_market)
-    ti.xcom_push(key='df_merged', value=df_merged.to_json())
-
-@task
-def extract_new_features(ti):
-    """
-    Extract features from original data.
-
-    Parameters
-    ----------
-    ti : Task instance(s)
-        A json serialized dataframe for original dataframe.
-
-    Returns
-    -------
-    ti : Task Instance.
-        Json serialized pandas dataframe for new feature dataset. 
-    """
-    df = pd.read_json(ti.xcom_pull(task_ids='merge_data', key='df_merged'))
-    df = df.assign(vol_moving_avg=df.groupby('Symbol')['Volume'].transform(lambda x: x.ewm(span=30, adjust=False).mean()),
-                   adj_close_rolling_med=df.groupby('Symbol')['Adj Close'].transform(lambda x: x.rolling(window=30, min_periods=1).median()))
-    ti.xcom_push(key='features_df', value=df.to_json())
-
-@task
-def save_to_parquet(path, filename, task_id, key, ti):
-    """
-    Saves dataframe to parquet format and saves as compressed 'gzip' file.
-
-    Parameters
-    ----------
-    path : string
-        Path to save.
-
-    filename : string
-        Name of file.
-
-    task_id : string
-        Task id which to retrieve data from.
-
-    key : string
-        Specified key from the task_id.
-
-    """
-    df = pd.read_json(ti.xcom_pull(task_ids=task_id, key=key))
-    if not os.path.exists(path):
-        os.makedirs(path)
-    df.to_parquet(os.path.join(path,filename), compression='gzip')
+    logging.basicConfig(filename=log_filename, level=logging.INFO)
+    logging.info(f'Starting Data Processing Task')
+    logging.info(f'Starting Data Processing Task...')
+    t1 = time.time()
+    df_final = process_data(raw_path)
+    t2 = time.time()
+    t_delta = (t2-t1)/60
+    logging.info(f'Data Processing completed in {t_delta} minutes')
+    logging.info('Saving data')
+    save_to_parquet(df_final, processed_data_path, filename)
+    logging.info(f'Original data saved to {os.path.join(processed_data_path, filename)}')
+    logging.shutdown()

@@ -1,0 +1,9 @@
+INFO:root:Starting Data Processing Task
+INFO:root:Starting Data Processing Task...
+INFO:root:Data Processing completed in 72.93573717276256 minutes
+INFO:root:Saving data
+INFO:root:Original data saved to /opt/airflow/data/processed/stock-market-prices.parquet.gzip
+INFO:root:Starting Feature Engineering Task
+INFO:root:Feature Engineering Task completed in 0.2180449604988098 minutes.
+INFO:root:Saving data to /opt/airflow/data/feature_data/30-day-window-stock-market-prices.parquet.gzip
+INFO:root:Data saved.

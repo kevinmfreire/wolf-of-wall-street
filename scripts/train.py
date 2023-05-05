@@ -20,17 +20,18 @@ features and target values (ie. stock prices, trading values, etc.)
 """
 import pandas as pd
 import logging
-import joblib 
+import time
 
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.preprocessing import MinMaxScaler
 
-from airflow.decorators import task
+from utils import *
 
-@task
-def train(log_filename: str , model_filename: str, scaler_filename: str, ti):
+# from airflow.decorators import task
+
+def train(data):
     """
     parameters
     ----------
@@ -52,11 +53,9 @@ def train(log_filename: str , model_filename: str, scaler_filename: str, ti):
     model : Saves the trained model to a pcikle file.
     scaler : Saves the trainined scaler for normalizing unseen data.
     """
-    logging.basicConfig(filename=log_filename, level=logging.INFO)
-
-    data = pd.read_json(ti.xcom_pull(task_ids='extract_features', key='features_df'))
     data['Date'] = pd.to_datetime(data['Date'])
     data.set_index('Date', inplace=True)
+
     data.dropna(inplace=True)
 
     features = ['vol_moving_avg', 'adj_close_rolling_med']
@@ -71,25 +70,38 @@ def train(log_filename: str , model_filename: str, scaler_filename: str, ti):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
+
     model.fit(X_train, y_train)
 
     y_pred = model.predict(X_test)
 
     train_accuracy = model.score(X_train, y_train)
     test_accuracy = model.score(X_test, y_test)
-
     logging.info(f'Model Performance Metrics: Training Accuracy: {train_accuracy}, Test Accuracy: {test_accuracy}')
 
     mae = mean_absolute_error(y_test, y_pred)
     mse = mean_squared_error(y_test, y_pred)
-
     logging.info(f'Model Prediction Metrics: Mean Absolute Error: {mae}, Mean Squared Error: {mse}')
-    logging.info(f'Saving Models.')
 
-    joblib.dump(model, model_filename, compress=True)
-    joblib.dump(scaler, scaler_filename, compress=True)
+    return model, scaler
 
-    logging.info(f'RandomForrestRegressor Model saved to {model_filename}')
-    logging.info(f'MinMaxScaler Model saved to {scaler_filename}')
- 
+if __name__ == '__main__':
+
+    data_path = '/opt/airflow/data/feature_data/30-day-window-stock-market-prices.parquet.gzip'
+    save_path = '/opt/airflow/models'
+    model_filename = 'volume_rf_reg.pkl'
+    scaler_filename = 'scaler_model.bin'
+    log_filename='/opt/airflow/logs/predictions.log'
+
+    logging.basicConfig(filename=log_filename, level=logging.INFO)
+
+    data = load_parquet_data(data_path)
+    t1 = time.time()
+    model, scaler = train(data)
+    t_delta = (time.time()-t1)/60
+    logging.info(f'Model trained in {t_delta} minutes')
+    logging.info(f'Saving models to {os.path.join(save_path)}.')
+    save_model(model, scaler, save_path, model_filename, scaler_filename)
+    logging.info(f'RandomForrestRegressor Model saved to {os.path.join(save_path,model_filename)}')
+    logging.info(f'MinMaxScaler Model saved to {os.path.join(save_path, scaler_filename)}')
     logging.shutdown()
