@@ -1,6 +1,18 @@
 import joblib
 import streamlit as st
 
+st.set_page_config(layout="wide")
+
+@st.cache_resource
+def load_model():
+    '''Using Streamlit cache_resource decorator to preserve RAM memory and for efficiency.'''
+    return joblib.load('models/volume_rf_reg.bin')
+
+@st.cache_resource
+def load_scaler():
+    '''Using Streamlit cache_resource decorator to preserve RAM memory and for efficiency.'''
+    return joblib.load('models/scaler_model.bin')
+
 class RandomForrestReg():
     """
     Main Class for serving the Machine Learning Model
@@ -22,10 +34,8 @@ class RandomForrestReg():
         It normalizes input data (vol_moving_avg, adj_close_rolling_med) and then predicts volume based on inputs.
     """
     def __init__(self):
-        self.model_file = 'models/volume_rf_reg.bin'
-        self.scaler_file = 'models/scaler_model.bin'
-        self.model = joblib.load(self.model_file)
-        self.scaler = joblib.load(self.scaler_file)
+        self.model = load_model()
+        self.scaler = load_scaler()
     
     def predict(self, vol_moving_avg, adj_close_rolling_med):
         """
@@ -44,13 +54,11 @@ class RandomForrestReg():
         Volume : Prediction of Random Forrest Regressor. 
         """
         input = self.scaler.fit_transform([[vol_moving_avg, adj_close_rolling_med]])
-        return {'Volume': int(self.model.predict(input)[0])}
+        return {'Volume':  float('{:.2f}'.format(self.model.predict(input)[0]))}
 
 if __name__ == '__main__':
 
     rf = RandomForrestReg()
-
-    st.set_page_config(layout="wide")
     st.write("""
             # Stock Market Volume Prediction
             """)
