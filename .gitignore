@@ -1,6 +1,5 @@
 /dags/__pycache__/
 /data
-/models
 /scripts/__pycache__/
 /logs/scheduler/
 /logs/dag_id=stock_market_pipeline_v0/

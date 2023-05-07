@@ -1,6 +1,5 @@
 import joblib
 import streamlit as st
-import boto3
 
 class RandomForrestReg():
     """
@@ -23,21 +22,8 @@ class RandomForrestReg():
         It normalizes input data (vol_moving_avg, adj_close_rolling_med) and then predicts volume based on inputs.
     """
     def __init__(self):
-        self.s3 = boto3.resource(
-            service_name='s3',
-            region_name='us-east-2',
-            aws_access_key_id='AWS_ACCESS_KEY_ID',
-            aws_secret_access_key='AWS_SECRET_ACCESS_KEY'
-        )
-        self.model_filename = 'volume_rf_reg.pkl'
-        self.scaler_filename = 'scaler_model.bin'
-        self.bucket = 'rtaistockmarket'
-
-        model_obj = self.s3.Bucket(self.bucket).Object(self.model_filename).download_file(self.model_filename)
-        scaler_obj = self.s3.Bucket(self.bucket).Object(self.scaler_filename).download_file(self.scaler_filename)
-
-        self.model_file = 'volume_rf_reg.pkl'
-        self.scaler_file = 'scaler_model.bin'
+        self.model_file = 'models/volume_rf_reg.bin'
+        self.scaler_file = 'models/scaler_model.bin'
         self.model = joblib.load(self.model_file)
         self.scaler = joblib.load(self.scaler_file)
     
@@ -58,7 +44,7 @@ class RandomForrestReg():
         Volume : Prediction of Random Forrest Regressor. 
         """
         input = self.scaler.fit_transform([[vol_moving_avg, adj_close_rolling_med]])
-        return {'Volume': self.model.predict(input)[0]}
+        return {'Volume': int(self.model.predict(input)[0])}
 
 if __name__ == '__main__':
 
@@ -68,8 +54,8 @@ if __name__ == '__main__':
     st.write("""
             # Stock Market Volume Prediction
             """)
-    vol_avg = st.text_input('Enter Volume Moving Average: ')
-    close_med = st.text_input('Enter Close Median')
+    vol_avg = st.text_input('Enter Volume 30 Day Moving Average: ')
+    close_med = st.text_input('Enter Adj Close Median')
 
     if vol_avg and close_med:
         pred = rf.predict(vol_avg, close_med)

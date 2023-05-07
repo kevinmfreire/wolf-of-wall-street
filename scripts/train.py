@@ -29,8 +29,6 @@ from sklearn.preprocessing import MinMaxScaler
 
 from utils import *
 
-# from airflow.decorators import task
-
 def train(data):
     """
     parameters
